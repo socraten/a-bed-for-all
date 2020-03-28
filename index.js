@@ -29,11 +29,17 @@ const allBeds = {}
 
 const hospitals = require('./hospitals')
 
-let bot = new Telegraf(process.env.BOT_TOKEN)
+const BOT_TOKEN = process.env.BOT_TOKEN;
+
+let bot = new Telegraf(process.env.BOT_TOKEN);
 bot.use(session())
 
 if (process.env.NODE_ENV === 'production') {
-    bot.setWebHook(process.env.HEROKU_URL + bot.token)
+    const port = process.env.PORT || 3000;
+    const HEROKU_URL = process.env.HEROKU_URL;
+
+    bot.telegram.setWebhook(`${HEROKU_URL}/bot${BOT_TOKEN}`);
+    bot.startWebhook(`/bot${BOT_TOKEN}`, null, port);
 }
 
 function mainMenu(ctx) {
@@ -161,5 +167,6 @@ function printPatient(patient) {
     return `${patient.id.replace(/^.+--/, '')}, ${patient.age}, ${patient.gender || ''},\n${patient.health},\n${patient.notes || ''}`
 }
 
-bot.launch()
-
+if (process.env.NODE_ENV !== 'production') {
+    bot.launch()
+}
