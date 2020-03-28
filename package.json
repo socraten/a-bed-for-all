@@ -1,0 +1,30 @@
+{
+  "name": "a-bed-for-all",
+  "version": "1.0.0",
+  "description": "A tool to help find bed in hospitals for covid 19 patients",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ./index"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hack-covid/a-bed-for-all.git"
+  },
+  "keywords": [
+    "covid19",
+    "javascript",
+    "nodejs",
+    "telegram",
+    "bot"
+  ],
+  "author": "",
+  "license": "SEE LICENSE IN LICENSE",
+  "bugs": {
+    "url": "https://github.com/hack-covid/a-bed-for-all/issues"
+  },
+  "homepage": "https://github.com/hack-covid/a-bed-for-all#readme",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "telegraf": "^3.36.0"
+  }
+}
