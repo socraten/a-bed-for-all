@@ -5,9 +5,9 @@ const Telegraf = require('telegraf')
 let bot = new Telegraf(process.env.BOT_TOKEN)
 
 if (process.env.NODE_ENV === 'production') {
-    bot.telegram.setWebhook(`${URL}/bot${API_TOKEN}`);
-    bot.setWebHook(process.env.HEROKU_URL+'/bot/' + bot.token);
-    bot.startWebhook(`/bot${API_TOKEN}`, null, 3000);
+    bot.telegram.setWebhook(process.env.HEROKU_URL+'/bot'+bot.token);
+    // bot.setWebHook(process.env.HEROKU_URL+'/bot/' + bot.token);
+    bot.startWebhook('/bot'+bot.token, null, 3000);
 }
 
 bot.start((ctx) => ctx.reply('Welcome!'))
