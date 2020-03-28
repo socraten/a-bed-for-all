@@ -11,7 +11,7 @@ bot.on('sticker', (ctx) => ctx.reply('👍'))
 bot.hears('hi', (ctx) => ctx.reply('Hey there'))
 
 if (process.env.NODE_ENV == 'production') {
-    bot.telegram.setWebhook(`S{HEROKU_URL}/bot${BOT_TOKEN}`);
+    bot.telegram.setWebhook(`${HEROKU_URL}/bot${BOT_TOKEN}`);
     // bot.setWebHook(process.env.HEROKU_URL+'/bot/' + bot.token);
     bot.startWebhook(`/bot${BOT_TOKEN}`, null, port);
 }else {
