@@ -120,9 +120,11 @@ bot.action(/^bed_add_for_kind ([0-9]+) ([0-9]+)$/, ctx => {
 
 bot.action(/^list_bed ([0-9]+)$/, ctx => {
     const hospitalId = accounts[+ctx.match[1]]
-    const beds = allBeds[hospitalId]
-    if (beds && beds.length) {
-        ctx.reply(beds.map(p => [hospitals[hospitalId]].concat(printPatient(p))).join('\n-----\n'))
+    if (allBeds.level1[hospitalId] || allBeds.level2[hospitalId]) {
+        ctx.reply(`${hospitals[hospitalId]} have:
+Level 1 ER ${allBeds.level1[hospitalId] || 0}
+Level 2 ER ${allBeds.level2[hospitalId] || 0}`
+        )
     } else {
         ctx.reply('Sorry I don\'t have available beds from you hospital')
     }
