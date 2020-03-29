@@ -54,6 +54,7 @@ Following the list of task I can do:
 `, Telegraf.Extra.HTML().markup(m => {
             let actions = [
                 [m.callbackButton('Add Beds', `bed_add ${ctx.message.from.id}`)],
+                [m.callbackButton('Remove Beds', `bed_remove ${ctx.message.from.id}`)],
                 [m.callbackButton('Add Patient', 'patient_add')],
                 [m.callbackButton('Remove Patient', 'patient_remove')],
                 [m.callbackButton('Patients List', `list_patient ${ctx.message.from.id}`)],
@@ -82,18 +83,22 @@ bot.action(/^patient_add$/, ctx => {
     ctx.reply('Can you tell me the patient\'s id?')
 })
 
+bot.action(/^patient_remove$/, ctx => {
+    ctx.session.removing_patient = true
+    ctx.replay('Can you tell me the patient\'s id?')
+})
+
 bot.action(/^list_patient ([0-9]+)$/, ctx => {
     const hospitalId = accounts[+ctx.match[1]]
     const patients = allPatients[hospitalId]
     if (patients && patients.length) {
         ctx.reply(patients.map(p => [hospitals[hospitalId]].concat(printPatient(p))).join('\n-----\n'))
     } else {
-        ctx.reply('Sorry I don\'t have patients from you hospital')
+        ctx.reply('Sorry I don\'t have patients from your hospital')
     }
 })
 
 bot.action(/^bed_add ([0-9]+)$/, ctx => {
-    console.log('bot add', ctx.match[1])
     const hospitalId = accounts[+ctx.match[1]]
 
     ctx.reply('Which kind of bed do you want to add?',
@@ -120,13 +125,14 @@ bot.action(/^bed_add_for_kind ([0-9]+) ([0-9]+)$/, ctx => {
 
 bot.action(/^list_bed ([0-9]+)$/, ctx => {
     const hospitalId = accounts[+ctx.match[1]]
+    console.log('list beds', hospitalId, allBeds)
     if (allBeds.level1[hospitalId] || allBeds.level2[hospitalId]) {
         ctx.reply(`${hospitals[hospitalId]} have:
 Level 1 ER ${allBeds.level1[hospitalId] || 0}
 Level 2 ER ${allBeds.level2[hospitalId] || 0}`
         )
     } else {
-        ctx.reply('Sorry I don\'t have available beds from you hospital')
+        ctx.reply('Sorry I don\'t have available beds from your hospital')
     }
 })
 
@@ -179,6 +185,13 @@ bot.on('text', ctx => {
         
         delete ctx.session.adding_beds
         ctx.reply('Bed added, thanks!')
+    } else if (ctx.session.removing_patient) {
+        const hospitalId = accounts[ctx.message.from.id]
+        const patientId = `${hospitals[hospitalId]}--${message}`
+        const idxToRemove = allPatients[hospitalId].findIndex(({ id }) => id === patientId)
+        if (idxToRemove !== -1) {
+            allPatients[hospitalId].splice(idxToRemove, 1)
+        }
     } else {
         console.log('oops')
     }
