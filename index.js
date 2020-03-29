@@ -120,7 +120,7 @@ bot.action(/^bed_add_for_kind ([0-9]+) ([0-9]+)$/, ctx => {
 
     const edLevelNumber = erLevel.replace(/^level/, '')
 
-    ctx.reply(`How many beds of ER Level ${edLevelNumber} do you wanto to add?`)
+    ctx.reply(`How many beds of ER Level ${edLevelNumber} do you want to add?`)
 })
 
 bot.action(/^list_bed ([0-9]+)$/, ctx => {
