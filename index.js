@@ -92,7 +92,10 @@ bot.action(/^list_patient ([0-9]+)$/, ctx => {
     }
 })
 
+broken to run debug locally...
+
 bot.action(/^bed_add ([0-9]+)$/, ctx => {
+    console.log('bot add', ctx.match[1])
     const hospitalId = accounts[+ctx.match[1]]
 
     ctx.reply('Which kind of bed do you want to add?',
