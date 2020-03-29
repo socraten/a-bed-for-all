@@ -25,7 +25,10 @@ const allPatients = {
         notes: 'is very very sick'
     }]
 }
-const allBeds = {}
+const allBeds = {
+    level1: {}, // Very High Level ER
+    level2: {} // High Level ER
+}
 
 const hospitals = require('./hospitals')
 
@@ -50,7 +53,7 @@ Wellcome ${user}, how can I help you?
 Following the list of task I can do: 
 `, Telegraf.Extra.HTML().markup(m => {
             let actions = [
-                [m.callbackButton('Beds', 'beds')],
+                [m.callbackButton('Add Beds', `add_beds ${ctx.message.from.id}`)],
                 [m.callbackButton('Add Patient', 'patient_add')],
                 [m.callbackButton('Remove Patient', 'patient_remove')],
                 [m.callbackButton('Patients List', `list_patient ${ctx.message.from.id}`)],
@@ -87,6 +90,31 @@ bot.action(/^list_patient ([0-9]+)$/, ctx => {
     } else {
         ctx.reply('Sorry I don\'t have patients from you hospital')
     }
+})
+
+bot.action(/^bed_add ([0-9]+)$/, ctx => {
+    const hospitalId = accounts[+ctx.match[1]]
+
+    ctx.reply('Which kind of bed do you want to add?',
+        Telegraf.Extra.HTML().markup(m =>
+            m.inlineKeyboard([
+                [m.callbackButton('Level 1 ER', `bed_add ${hospitalId} 1`)],
+                [m.callbackButton('Level 2 ER', `bed_add ${hospitalId} 2`)]
+            ])
+        )
+    )
+})
+
+bot.action(/^bed_add ([0-9]+) ([0-9]+)$/, ctx => {
+    const hospitalId = accounts[+ctx.match[1]]
+    const erLevel = +ctx.match[2] === 1 ? 'level1' : 'level2'
+    ctx.session.adding_beds = {
+        hospitalId, erLevel
+    }
+
+    const edLevelNumber = erLevel.replace(/^level/, '')
+
+    ctx.reply(`How many beds of ER Level ${edLevelNumber} do you wanto to add?`)
 })
 
 bot.action(/^list_bed ([0-9]+)$/, ctx => {
@@ -140,6 +168,14 @@ bot.on('text', ctx => {
         } else {
             console.log('oops patient!')
         }
+    } else if (ctx.session.adding_beds) {
+        const beds = +message
+        const { hospitalId, erLevel } = ctx.session.adding_beds
+
+        allBeds[hospitalId][erLevel] = beds
+        
+        delete ctx.session.adding_beds
+        ctx.reply('Bed added, thanks!')
     } else {
         console.log('oops')
     }
