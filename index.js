@@ -173,7 +173,7 @@ bot.on('text', ctx => {
         const beds = +message
         const { hospitalId, erLevel } = ctx.session.adding_beds
 
-        allBeds[hospitalId][erLevel] = beds
+        allBeds[erLevel][hospitalId] = beds
         
         delete ctx.session.adding_beds
         ctx.reply('Bed added, thanks!')
