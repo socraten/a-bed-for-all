@@ -53,7 +53,7 @@ Wellcome ${user}, how can I help you?
 Following the list of task I can do: 
 `, Telegraf.Extra.HTML().markup(m => {
             let actions = [
-                [m.callbackButton('Add Beds', `add_beds ${ctx.message.from.id}`)],
+                [m.callbackButton('Add Beds', `bed_add ${ctx.message.from.id}`)],
                 [m.callbackButton('Add Patient', 'patient_add')],
                 [m.callbackButton('Remove Patient', 'patient_remove')],
                 [m.callbackButton('Patients List', `list_patient ${ctx.message.from.id}`)],
@@ -92,8 +92,6 @@ bot.action(/^list_patient ([0-9]+)$/, ctx => {
     }
 })
 
-broken to run debug locally...
-
 bot.action(/^bed_add ([0-9]+)$/, ctx => {
     console.log('bot add', ctx.match[1])
     const hospitalId = accounts[+ctx.match[1]]
@@ -101,14 +99,14 @@ bot.action(/^bed_add ([0-9]+)$/, ctx => {
     ctx.reply('Which kind of bed do you want to add?',
         Telegraf.Extra.HTML().markup(m =>
             m.inlineKeyboard([
-                [m.callbackButton('Level 1 ER', `bed_add ${hospitalId} 1`)],
-                [m.callbackButton('Level 2 ER', `bed_add ${hospitalId} 2`)]
+                [m.callbackButton('Level 1 ER', `bed_add_for_kind ${hospitalId} 1`)],
+                [m.callbackButton('Level 2 ER', `bed_add_for_kind ${hospitalId} 2`)]
             ])
         )
     )
 })
 
-bot.action(/^bed_add ([0-9]+) ([0-9]+)$/, ctx => {
+bot.action(/^bed_add_for_kind ([0-9]+) ([0-9]+)$/, ctx => {
     const hospitalId = accounts[+ctx.match[1]]
     const erLevel = +ctx.match[2] === 1 ? 'level1' : 'level2'
     ctx.session.adding_beds = {
