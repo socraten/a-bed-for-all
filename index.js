@@ -116,7 +116,7 @@ bot.on('text', ctx => {
     const message = ctx.message.text
     if (ctx.session.record_hospital) {
         const hospitalId = repository.findHospitalId(message)
-        if (!hospitalId) {
+        if (hospitalId !== null) {
             ctx.reply('This hospital is unknown')
             return;
         }
