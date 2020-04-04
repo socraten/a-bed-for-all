@@ -61,7 +61,7 @@ Following the list of task I can do:
                 [m.callbackButton('Beds List', `list_bed ${ctx.message.from.id}`)]
             ]
 
-            if (!accounts[ctx.message.from.id]) {
+            if (!(ctx.message.from.id in accounts)) {
                 actions = [m.callbackButton('Register', 'register')]
             }
 
