@@ -3,34 +3,7 @@ require('dotenv').config()
 const Telegraf = require('telegraf')
 const session = require('telegraf/session')
 
-const accounts = {}
-const allPatients = {
-    4: [{
-        id: '4--123456',
-        age: 55,
-        gender: 'male',
-        health: ['smoker', 'sick'],
-        notes: 'is very sick'
-    }, {
-        id: '4--123457',
-        age: 75,
-        gender: 'male',
-        health: ['sick'],
-        notes: 'is very sick'
-    }, {
-        id: '4--123458',
-        age: 25,
-        gender: 'male',
-        health: ['smoker', 'sick'],
-        notes: 'is very very sick'
-    }]
-}
-const allBeds = {
-    level1: {}, // Very High Level ER
-    level2: {} // High Level ER
-}
-
-const hospitals = require('./hospitals')
+const repository = require('./repository')
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
@@ -61,7 +34,7 @@ Following the list of task I can do:
                 [m.callbackButton('Beds List', `list_bed ${ctx.message.from.id}`)]
             ]
 
-            if (!(ctx.message.from.id in accounts)) {
+            if (!repository.accountExists(ctx.message.from.id)) {
                 actions = [m.callbackButton('Register', 'register')]
             }
 
@@ -89,17 +62,17 @@ bot.action(/^patient_remove$/, ctx => {
 })
 
 bot.action(/^list_patient ([0-9]+)$/, ctx => {
-    const hospitalId = accounts[+ctx.match[1]]
-    const patients = allPatients[hospitalId]
+    const accountId = +ctx.match[1]
+    const patients = repository.findAllPatients(accountId)
     if (patients && patients.length) {
-        ctx.reply(patients.map(p => [hospitals[hospitalId]].concat(printPatient(p))).join('\n-----\n'))
+        ctx.reply(patients.map(p => [repository.findHospital(accountId)].concat(printPatient(p))).join('\n-----\n'))
     } else {
         ctx.reply('Sorry I don\'t have patients from your hospital')
     }
 })
 
 bot.action(/^bed_add ([0-9]+)$/, ctx => {
-    const hospitalId = accounts[+ctx.match[1]]
+    const hospitalId = repository.findHospitalIdFromAccount(+ctx.match[1])
 
     ctx.reply('Which kind of bed do you want to add?',
         Telegraf.Extra.HTML().markup(m =>
@@ -112,7 +85,7 @@ bot.action(/^bed_add ([0-9]+)$/, ctx => {
 })
 
 bot.action(/^bed_add_for_kind ([0-9]+) ([0-9]+)$/, ctx => {
-    const hospitalId = accounts[+ctx.match[1]]
+    const hospitalId = repository.findHospitalIdFromAccount(+ctx.match[1])
     const erLevel = +ctx.match[2] === 1 ? 'level1' : 'level2'
     ctx.session.adding_beds = {
         hospitalId, erLevel
@@ -124,33 +97,41 @@ bot.action(/^bed_add_for_kind ([0-9]+) ([0-9]+)$/, ctx => {
 })
 
 bot.action(/^list_bed ([0-9]+)$/, ctx => {
-    const hospitalId = accounts[+ctx.match[1]]
-    console.log('list beds', hospitalId, allBeds)
-    if (allBeds.level1[hospitalId] || allBeds.level2[hospitalId]) {
-        ctx.reply(`${hospitals[hospitalId]} have:
-Level 1 ER ${allBeds.level1[hospitalId] || 0}
-Level 2 ER ${allBeds.level2[hospitalId] || 0}`
-        )
-    } else {
+    const accountId = +ctx.match[1]
+    const beds = repository.findBeds(accountId)
+    
+    if (!beds) {
         ctx.reply('Sorry I don\'t have available beds from your hospital')
     }
+
+    const { level1, level2 } = beds
+
+    ctx.reply(`${repository.findHospital(accountId)} have:
+    Level 1 ER ${level1}
+    Level 2 ER ${level2}`
+    )
 })
 
 bot.on('text', ctx => {
     const message = ctx.message.text
     if (ctx.session.record_hospital) {
-        const hospitalId = hospitals.indexOf(message.toLowerCase())
-        if (hospitalId === -1) {
+        const hospitalId = repository.findHospitalId(message)
+        if (!hospitalId) {
             ctx.reply('This hospital is unknown')
             return;
         }
         
-        accounts[ctx.message.from.id] = hospitalId
-        ctx.reply('Thanks!', '/help')
+        if (
+            repository.registerAccount(ctx.message.from.id, hospitalId)
+        ) {
+            ctx.reply('Thanks!', '/help')
+        } else {
+            ctx.reply('Sorry, I can\'t register your account on the provided hospital')
+        }
         ctx.session.record_hospital = false
     } else if (ctx.session.adding_patient) {
         if (!ctx.session.adding_patient.id) {
-            ctx.session.adding_patient.id = `${hospitals[ctx.message.from.id]}--${message}`
+            ctx.session.adding_patient.id = repository.patientId(ctx.message.from.id, message)
             ctx.reply('Can you tell me the patient\'s age?')
         } else if (!ctx.session.adding_patient.age) {
             ctx.session.adding_patient.age = +message
@@ -163,14 +144,12 @@ bot.on('text', ctx => {
 
             if (patientIsValid(ctx.session.adding_patient)) {
                 const patient = clonePatient(ctx.session.adding_patient)
-                const hospitalId = accounts[ctx.message.from.id]
-                if (!allPatients[hospitalId]) {
-                    allPatients[hospitalId] = []
+                if (repository.addPatient(ctx.message.from.id, patient)) {
+                    ctx.reply('Patient added, thanks!')
+                } else {
+                    ctx.reply('Patient cannot be added as already exists')
                 }
-                console.log('add patient', hospitalId)
-                allPatients[hospitalId].push(patient)
                 delete ctx.session.adding_patient
-                ctx.reply('Patient added, thanks!')
             } else {
                 ctx.reply('You did something wrong...sorry')
             }
@@ -178,20 +157,14 @@ bot.on('text', ctx => {
             console.log('oops patient!')
         }
     } else if (ctx.session.adding_beds) {
-        const beds = +message
-        const { hospitalId, erLevel } = ctx.session.adding_beds
+        repository.addBeds(ctx.session.adding_beds, +message)
 
-        allBeds[erLevel][hospitalId] = beds
-        
         delete ctx.session.adding_beds
         ctx.reply('Bed added, thanks!')
     } else if (ctx.session.removing_patient) {
-        const hospitalId = accounts[ctx.message.from.id]
-        const patientId = `${hospitals[hospitalId]}--${message}`
-        const idxToRemove = allPatients[hospitalId].findIndex(({ id }) => id === patientId)
-        if (idxToRemove !== -1) {
-            allPatients[hospitalId].splice(idxToRemove, 1)
-        }
+        repository.removePatient(ctx.message.from.id, message)
+        
+        ctx.reply('Patient removed')
     } else {
         console.log('oops')
     }
@@ -216,7 +189,7 @@ function clonePatient(patient) {
 }
 
 function printPatient(patient) {
-    return `${patient.id.replace(/^.+--/, '')}, ${patient.age}, ${patient.gender || ''},\n${patient.health},\n${patient.notes || ''}`
+    return `${repository.patientCode(patient)}, ${patient.age}, ${patient.gender || ''},\n${patient.health},\n${patient.notes || ''}`
 }
 
 if (process.env.NODE_ENV !== 'production') {
